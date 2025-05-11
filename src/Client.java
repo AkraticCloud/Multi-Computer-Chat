@@ -22,7 +22,7 @@ public class Client {
 
     public Client() {
         try{
-            clientSock = new Socket("10.128.164.125",Server.PORT);
+            clientSock = new Socket("127.0.0.1",Server.PORT);
             receiveData = new DataInputStream(new BufferedInputStream(clientSock.getInputStream()));
             sendData = new DataOutputStream(clientSock.getOutputStream());
 
