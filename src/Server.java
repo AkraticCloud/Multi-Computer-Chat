@@ -8,7 +8,6 @@ public class Server {
     public static final int PORT = 3030;
     private ServerSocket server;
     private Set<ClientHandler> clients = ConcurrentHashMap.newKeySet();
-    private int clientCount = 0;
 
     public Server() {
         try {
@@ -24,8 +23,7 @@ public class Server {
     }
 
     private void acceptClients() throws IOException {
-        Socket clientSock =server.accept();
-        clientCount++;
+        Socket clientSock = server.accept();
         DataInputStream in = new DataInputStream(clientSock.getInputStream());
         String username = in.readUTF();
 
@@ -39,24 +37,26 @@ public class Server {
         System.out.printf("Broadcasting message from %s\n", user);
         for(ClientHandler recipients : clients) {
             if(!(recipients.getUsername().equals(user)))
-                recipients.sendText("MSG|ALL|" + user + "|" + message);
+                recipients.sendText("MSG|ALL|" + user + "|" + message + "\n");
         }
     }
 
     public void sendMessageTo(String user, String recipient, String message) {
         //Check if the recipient exists
-        if(recipientDoesNotExist(recipient)){
-            System.out.printf("%s failed to send message: Recipient does not exist", user); //Server notification
+        if(!recipientExists(recipient)){
+            System.out.printf("%s failed to send message: Recipient does not exist.\n", user); //Server notification
             for(ClientHandler client : clients)
                 if(client.getUsername().equals(user))
-                    client.sendText("ERROR|User " + recipient + "does not exist."); //Inform the sender
+                    client.sendText("ERROR|User " + recipient + " does not exist.\n"); //Inform the sender
             return;
         }
 
         System.out.printf("Sending message from %s to %s\n", user, recipient);
+
+        //Send message to recipient
         for(ClientHandler client : clients) {
             if (client.getUsername().equals(recipient)) {
-                client.sendText("MSG|" + user + "|" + recipient + "|" + message);
+                client.sendText("MSG|" + user + "|" + recipient + "|" + message + "\n");
                 break;
             }
         }
@@ -65,19 +65,21 @@ public class Server {
 
     public void broadcastFile(String user, String filename, byte[] content) {
         System.out.printf("Broadcasting file from %s", user);
-        for(ClientHandler sender : clients) {
-            sender.sendFile("FILE|ALL|" + filename + "|" + user, content);
+        //Send to all other clients
+        for(ClientHandler client : clients) {
+            if(!client.getUsername().equals(user))
+                client.sendFile("FILE|ALL|" + filename + "|" + user, content);
         }
 
     }
 
     public void sendFileTo(String user, String recipient, String filename, byte[] content) {
         //Validate recipient
-        if(recipientDoesNotExist(recipient)){
+        if(!recipientExists(recipient)){
             System.out.printf("%s failed to send message: Recipient does not exist\n", user); //Server notification
             for(ClientHandler client : clients)
                 if(client.getUsername().equals(user))
-                    client.sendText("ERROR|User " + recipient + "does not exist.");
+                    client.sendText("ERROR|User " + recipient + " does not exist.\n");
             return;
         }
 
@@ -91,9 +93,9 @@ public class Server {
 
     }
 
-    public boolean recipientDoesNotExist(String name){
+    public boolean recipientExists(String name){
         for (ClientHandler client: clients)
-            if(!client.getUsername().equals(name)) return true;
+            if(client.getUsername().equals(name)) return true;
         return false;
     }
 
